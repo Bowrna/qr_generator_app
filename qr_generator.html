@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>QR Code Generator</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    form > div { margin-bottom: 10px; }
+    .qrcode { margin: 10px; display: inline-block; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>QR Code Generator</h1>
+  <form id="dynamicForm"></form>
+  <button onclick="generateQRCodes()">Generate QR Codes</button>
+  <button onclick="exportPDF()">Export as PDF</button>
+  <hr>
+  <div id="qrcodes"></div>
+
+  <script>
+    async function loadConfig() {
+      const response = await fetch('config.json');
+      const config = await response.json();
+      const form = document.getElementById('dynamicForm');
+
+      config.fields.forEach(field => {
+        const div = document.createElement('div');
+        const label = document.createElement('label');
+        label.textContent = field.name + ": ";
+        div.appendChild(label);
+
+        let input;
+        if (field.type === 'dropdown') {
+          input = document.createElement('select');
+          input.name = field.name;
+          field.options.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt;
+            option.textContent = opt;
+            input.appendChild(option);
+          });
+        } else {
+          input = document.createElement('input');
+          input.name = field.name;
+          input.type = field.type === 'number' ? 'number' : field.type;
+        }
+
+        div.appendChild(input);
+        form.appendChild(div);
+      });
+    }
+
+    function generateQRCodes() {
+      const form = document.getElementById('dynamicForm');
+      const data = {};
+      for (const element of form.elements) {
+        if (element.name) {
+          data[element.name] = element.value;
+        }
+      }
+
+      const count = parseInt(data['Count']) || 1;
+      const qrcodeContainer = document.getElementById('qrcodes');
+      qrcodeContainer.innerHTML = '';
+
+      for (let i = 0; i < count; i++) {
+        const qrText = JSON.stringify({ ...data, Serial: i + 1 });
+        const qrDiv = document.createElement('div');
+        qrDiv.className = 'qrcode';
+
+        const canvas = document.createElement('canvas');
+        const qr = new QRious({
+          element: canvas,
+          value: qrText,
+          size: 150,
+        });
+
+        const label = document.createElement('div');
+        label.textContent = qrText;
+
+        qrDiv.appendChild(canvas);
+        qrDiv.appendChild(label);
+        qrcodeContainer.appendChild(qrDiv);
+      }
+    }
+
+    function exportPDF() {
+      const element = document.getElementById('qrcodes');
+      const opt = {
+        margin:       0.5,
+        filename:     'qrcodes.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    loadConfig();
+  </script>
+</body>
+</html>

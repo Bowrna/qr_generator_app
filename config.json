@@ -1,0 +1,28 @@
+{
+    "fields": [
+      {
+        "name": "Operator ID",
+        "type": "dropdown",
+        "options": ["OP1", "OP2", "OP3"]
+      },
+      {
+        "name": "Machine ID",
+        "type": "dropdown",
+        "options": ["M1", "M2", "M3"]
+      },
+      {
+        "name": "Dimension",
+        "type": "dropdown",
+        "options": ["Small", "Medium", "Large"]
+      },
+      {
+        "name": "Date of Manufacturing",
+        "type": "date"
+      },
+      {
+        "name": "Count",
+        "type": "number"
+      }
+    ]
+  }
+  
