@@ -145,12 +145,43 @@
           foreground: '#000000'
         });
 
-        const label = document.createElement('div');
-        label.className = 'qr-label';
-        label.textContent = qrText;
+        // Create table for data display
+        const dataTable = document.createElement('table');
+        dataTable.className = 'qr-data-table';
+        
+        // Add table header
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        const headerCell1 = document.createElement('th');
+        const headerCell2 = document.createElement('th');
+        headerCell1.textContent = 'Field';
+        headerCell2.textContent = 'Value';
+        headerRow.appendChild(headerCell1);
+        headerRow.appendChild(headerCell2);
+        thead.appendChild(headerRow);
+        dataTable.appendChild(thead);
+        
+        // Add table body
+        const tbody = document.createElement('tbody');
+        
+        // Add all data fields to table
+        Object.entries({ ...data, Serial: i + 1 }).forEach(([key, value]) => {
+          const row = document.createElement('tr');
+          const cell1 = document.createElement('td');
+          const cell2 = document.createElement('td');
+          
+          cell1.textContent = key;
+          cell2.textContent = value;
+          
+          row.appendChild(cell1);
+          row.appendChild(cell2);
+          tbody.appendChild(row);
+        });
+        
+        dataTable.appendChild(tbody);
 
         qrDiv.appendChild(canvas);
-        qrDiv.appendChild(label);
+        qrDiv.appendChild(dataTable);
         qrcodeContainer.appendChild(qrDiv);
       }
     }
