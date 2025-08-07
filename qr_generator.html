@@ -2,63 +2,128 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QR Code Generator</title>
+  <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    form > div { margin-bottom: 10px; }
-    .qrcode { margin: 10px; display: inline-block; text-align: center; }
-  </style>
 </head>
 <body>
-  <h1>QR Code Generator</h1>
-  <form id="dynamicForm"></form>
-  <button onclick="generateQRCodes()">Generate QR Codes</button>
-  <button onclick="exportPDF()">Export as PDF</button>
-  <hr>
-  <div id="qrcodes"></div>
+  <div class="container">
+    <header class="header">
+      <h1>QR Code Generator</h1>
+      <p>Generate QR codes for manufacturing and inventory tracking</p>
+    </header>
+
+    <main class="content">
+      <section class="form-section">
+        <h2>Configuration</h2>
+        <form id="dynamicForm">
+          <div class="form-row" id="formFields"></div>
+        </form>
+      </section>
+
+      <div class="button-group">
+        <button class="btn btn-primary" onclick="generateQRCodes()">
+          <span>🔍</span>
+          Generate QR Codes
+        </button>
+        <button class="btn btn-secondary" onclick="clearForm()">
+          <span>🗑️</span>
+          Clear Form
+        </button>
+        <button class="btn btn-success" onclick="exportPDF()">
+          <span>📄</span>
+          Export as PDF
+        </button>
+      </div>
+
+      <section class="qr-section">
+        <h2>Generated QR Codes</h2>
+        <div id="qrcodes" class="qr-grid"></div>
+      </section>
+    </main>
+  </div>
 
   <script>
     async function loadConfig() {
-      const response = await fetch('config.json');
-      const config = await response.json();
-      const form = document.getElementById('dynamicForm');
+      try {
+        const response = await fetch('config.json');
+        const config = await response.json();
+        const formFields = document.getElementById('formFields');
 
-      config.fields.forEach(field => {
-        const div = document.createElement('div');
-        const label = document.createElement('label');
-        label.textContent = field.name + ": ";
-        div.appendChild(label);
+        config.fields.forEach(field => {
+          const formGroup = document.createElement('div');
+          formGroup.className = 'form-group';
 
-        let input;
-        if (field.type === 'dropdown') {
-          input = document.createElement('select');
-          input.name = field.name;
-          field.options.forEach(opt => {
-            const option = document.createElement('option');
-            option.value = opt;
-            option.textContent = opt;
-            input.appendChild(option);
-          });
-        } else {
-          input = document.createElement('input');
-          input.name = field.name;
-          input.type = field.type === 'number' ? 'number' : field.type;
-        }
+          const label = document.createElement('label');
+          label.textContent = field.name + ": ";
+          formGroup.appendChild(label);
 
-        div.appendChild(input);
-        form.appendChild(div);
-      });
+          let input;
+          if (field.type === 'dropdown') {
+            input = document.createElement('select');
+            input.name = field.name;
+            input.required = true;
+            
+            // Add default option
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = `Select ${field.name}`;
+            defaultOption.disabled = true;
+            defaultOption.selected = true;
+            input.appendChild(defaultOption);
+            
+            field.options.forEach(opt => {
+              const option = document.createElement('option');
+              option.value = opt;
+              option.textContent = opt;
+              input.appendChild(option);
+            });
+          } else {
+            input = document.createElement('input');
+            input.name = field.name;
+            input.type = field.type === 'number' ? 'number' : field.type;
+            input.required = true;
+            
+            if (field.type === 'number') {
+              input.min = '1';
+              input.max = '100';
+              input.value = '1';
+            }
+          }
+
+          formGroup.appendChild(input);
+          formFields.appendChild(formGroup);
+        });
+      } catch (error) {
+        console.error('Error loading configuration:', error);
+        document.getElementById('formFields').innerHTML = 
+          '<div class="loading">Error loading configuration. Please check if config.json exists.</div>';
+      }
     }
 
     function generateQRCodes() {
       const form = document.getElementById('dynamicForm');
       const data = {};
+      let isValid = true;
+
+      // Validate form
       for (const element of form.elements) {
-        if (element.name) {
-          data[element.name] = element.value;
+        if (element.name && element.type !== 'button') {
+          if (!element.value.trim()) {
+            element.style.borderColor = '#dc3545';
+            isValid = false;
+          } else {
+            element.style.borderColor = '#e9ecef';
+            data[element.name] = element.value;
+          }
         }
+      }
+
+      if (!isValid) {
+        alert('Please fill in all required fields.');
+        return;
       }
 
       const count = parseInt(data['Count']) || 1;
@@ -75,30 +140,90 @@
           element: canvas,
           value: qrText,
           size: 150,
+          level: 'H',
+          background: '#ffffff',
+          foreground: '#000000'
         });
 
-        const label = document.createElement('div');
-        label.textContent = qrText;
+        // Create table for data display
+        const dataTable = document.createElement('table');
+        dataTable.className = 'qr-data-table';
+        
+        // Add table header
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        const headerCell1 = document.createElement('th');
+        const headerCell2 = document.createElement('th');
+        headerCell1.textContent = 'Field';
+        headerCell2.textContent = 'Value';
+        headerRow.appendChild(headerCell1);
+        headerRow.appendChild(headerCell2);
+        thead.appendChild(headerRow);
+        dataTable.appendChild(thead);
+        
+        // Add table body
+        const tbody = document.createElement('tbody');
+        
+        // Add all data fields to table
+        Object.entries({ ...data, Serial: i + 1 }).forEach(([key, value]) => {
+          const row = document.createElement('tr');
+          const cell1 = document.createElement('td');
+          const cell2 = document.createElement('td');
+          
+          cell1.textContent = key;
+          cell2.textContent = value;
+          
+          row.appendChild(cell1);
+          row.appendChild(cell2);
+          tbody.appendChild(row);
+        });
+        
+        dataTable.appendChild(tbody);
 
         qrDiv.appendChild(canvas);
-        qrDiv.appendChild(label);
+        qrDiv.appendChild(dataTable);
         qrcodeContainer.appendChild(qrDiv);
       }
     }
 
+    function clearForm() {
+      const form = document.getElementById('dynamicForm');
+      form.reset();
+      
+      // Reset border colors
+      for (const element of form.elements) {
+        if (element.name && element.type !== 'button') {
+          element.style.borderColor = '#e9ecef';
+        }
+      }
+      
+      // Clear QR codes
+      document.getElementById('qrcodes').innerHTML = '';
+    }
+
     function exportPDF() {
       const element = document.getElementById('qrcodes');
+      
+      if (element.children.length === 0) {
+        alert('Please generate QR codes first before exporting to PDF.');
+        return;
+      }
+
       const opt = {
-        margin:       0.5,
-        filename:     'qrcodes.pdf',
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+        margin: 0.5,
+        filename: 'qrcodes.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
       };
+      
       html2pdf().set(opt).from(element).save();
     }
 
-    loadConfig();
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', function() {
+      loadConfig();
+    });
   </script>
 </body>
 </html>
